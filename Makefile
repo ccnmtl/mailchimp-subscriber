@@ -28,7 +28,7 @@ run: $(PY_SENTINAL)
 	$(ENV_PYTHON) $(SCRIPT_FILE)
 
 test: $(PY_SENTINAL)
-	$(VE)/bin/python -m tests/$(TEST_FILES)
+	$(VE)/bin/python -m tests.test-mailchimp-subscriber
 
 clean:
 	rm -rf ve
