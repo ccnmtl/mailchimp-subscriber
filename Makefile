@@ -8,7 +8,7 @@ PY_SENTINAL ?= $(VE)/sentinal
 WHEEL_VERSION ?= 0.29.0
 VIRTUALENV ?= virtualenv.py
 SUPPORT_DIR ?= requirements/virtualenv_support/
-SCRIPT_FILE ?= mailchimp-subscriber.py
+SCRIPT_FILE ?= mailchimp_subscriber.py
 TEST_FILES ?= *
 MAX_COMPLEXITY ?= 10
 PY_DIRS ?= *.py tests --exclude virtualenv.py
@@ -28,7 +28,7 @@ run: $(PY_SENTINAL)
 	$(ENV_PYTHON) $(SCRIPT_FILE)
 
 test: $(PY_SENTINAL)
-	$(VE)/bin/python -m tests.test-mailchimp-subscriber
+	$(VE)/bin/python -m tests.test_mailchimp_subscriber
 
 clean:
 	rm -rf ve
