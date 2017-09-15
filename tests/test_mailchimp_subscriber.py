@@ -7,8 +7,9 @@ from mailchimp_subscriber import (
 class TestMailchimpSubscriber(unittest.TestCase):
 
     def test_load_conf(self):
-        list_id, mc_key = load_conf('tests/test.conf')
+        list_id, mc_user, mc_key = load_conf('tests/test.conf')
         self.assertEqual(list_id, '1234')
+        self.assertEqual(mc_user, 'ctl')
         self.assertEqual(mc_key, '123xyz')
 
     def test_load_users(self):
