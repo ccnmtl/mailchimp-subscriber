@@ -9,6 +9,8 @@ WHEEL_VERSION ?= 0.29.0
 VIRTUALENV ?= virtualenv.py
 SUPPORT_DIR ?= requirements/virtualenv_support/
 SCRIPT_FILE ?= mailchimp_subscriber.py
+CONF_FILE ?= mailchimp-subscriber.conf
+USERS_FILE ?= tests/test-user-list.txt
 TEST_FILES ?= *
 MAX_COMPLEXITY ?= 10
 PY_DIRS ?= *.py tests --exclude virtualenv.py
@@ -25,7 +27,7 @@ flake8: $(PY_SENTINAL)
 	$(FLAKE8) $(PY_DIRS) --max-complexity=$(MAX_COMPLEXITY)
 
 run: $(PY_SENTINAL)
-	$(ENV_PYTHON) $(SCRIPT_FILE)
+	$(ENV_PYTHON) $(SCRIPT_FILE) $(CONF_FILE) $(USERS_FILE)
 
 test: $(PY_SENTINAL)
 	$(VE)/bin/python -m tests.test_mailchimp_subscriber
