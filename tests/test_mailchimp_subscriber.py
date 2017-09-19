@@ -1,6 +1,7 @@
 import unittest
+from unittest.mock import patch, MagicMock
 from mailchimp_subscriber import (
-    load_conf, load_users  # , process_users
+    load_conf, load_users, process_users
 )
 
 
@@ -22,8 +23,58 @@ class TestMailchimpSubscriber(unittest.TestCase):
         loaded_users = load_users('tests/test-user-list.txt')
         self.assertEqual(test_users, loaded_users)
 
-    def test_process_users(self):
-        self.assertTrue(True)
+    @patch('mailchimp_subscriber.MailChimp')
+    def test_process_users(self, mock_mail_chimp):
+        # Set up mock
+        mock_client = mock_mail_chimp()
+        test_list = {'members': [{'email_address': 'test0@columbia.edu'},
+                     {'email_address': 'test1@columbia.edu'},
+                     {'email_address': 'test2@columbia.edu'},
+                     {'email_address': 'test3@columbia.edu'},
+                     {'email_address': 'test4@columbia.edu'},
+                     {'email_address': 'test5@columbia.edu'},
+                     {'email_address': 'test6@columbia.edu'},
+                     {'email_address': 'test7@columbia.edu'},
+                     {'email_address': 'test8@columbia.edu'},
+                     {'email_address': 'test9@columbia.edu'}]}
+        mock_client.lists.members.all = MagicMock(return_value=test_list)
+
+        # Pass in entirely unique email addresses
+        test_users = {
+            'alice@columbia.edu',
+            'bob@columbia.edu',
+            'nick@columbia.edu',
+            'joe@columbia.edu'
+        }
+        self.assertEqual(process_users(test_users, 'ctl', '123xyz', 'bar'),
+                         test_users)
+
+        # Pass in partially unique addresses
+        test_users = {
+            'alice@columbia.edu',
+            'bob@columbia.edu',
+            'test0@columbia.edu',
+            'test1@columbia.edu'
+        }
+        test_return = {'alice@columbia.edu', 'bob@columbia.edu'}
+        self.assertEqual(process_users(test_users, 'ctl', '123xyz', 'bar'),
+                         test_return)
+
+        # Pass in entirely non-unique email addresses
+        test_users = {'test0@columbia.edu', 'test1@columbia.edu',
+                      'test2@columbia.edu', 'test3@columbia.edu',
+                      'test4@columbia.edu', 'test5@columbia.edu',
+                      'test6@columbia.edu', 'test7@columbia.edu',
+                      'test8@columbia.edu', 'test9@columbia.edu'}
+        test_return = set()
+        self.assertEqual(process_users(test_users, 'ctl', '123xyz', 'bar'),
+                         test_return)
+
+        # Pass in an empty set
+        test_users = set()
+        test_return = set()
+        self.assertEqual(process_users(test_users, 'ctl', '123xyz', 'bar'),
+                         test_return)
 
 
 if __name__ == "__main__":
