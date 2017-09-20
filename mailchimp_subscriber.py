@@ -1,6 +1,18 @@
 import sys
 import configparser
+import re
 from mailchimp3 import MailChimp
+
+EMAIL_RE = re.compile(r'(^[a-zA-Z0-9_+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)')
+
+
+def validate_email(email_address):
+    """Validate the syntax of the email address"""
+    match = EMAIL_RE.match(email_address)
+    if match:
+        return True
+    else:
+        return False
 
 
 def load_conf(conf_file):
@@ -17,7 +29,7 @@ def load_users(users_file):
     """Read the email addresses from disk.
     Returns a set of email addresses"""
     with open(users_file, 'r') as f:
-        return {l.rstrip() for l in f.readlines()}
+        return {l.rstrip() for l in f.readlines() if validate_email(l)}
 
 
 def process_users(users, list_id, mc_user, mc_key):
@@ -30,6 +42,10 @@ def process_users(users, list_id, mc_user, mc_key):
     email_addresses = {contact['email_address']
                        for contact in contacts['members']}
     return users.difference(email_addresses)
+
+
+def add_users(users, list_id, mc_user, mc_key):
+    return False
 
 
 if __name__ == "__main__":

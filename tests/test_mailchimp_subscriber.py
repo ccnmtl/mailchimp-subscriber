@@ -1,11 +1,18 @@
 import unittest
 from unittest.mock import patch, MagicMock
 from mailchimp_subscriber import (
-    load_conf, load_users, process_users
+    load_conf, load_users, process_users, validate_email,
+    add_users
 )
 
 
 class TestMailchimpSubscriber(unittest.TestCase):
+    def test_validate_email(self):
+        self.assertEqual(validate_email('foo'), False)
+        self.assertEqual(validate_email('foo@notld'), False)
+        self.assertEqual(validate_email('foo@columbia.edu'), True)
+        self.assertEqual(validate_email('foo@columbia,edu'), False)
+        self.assertEqual(validate_email('foo+bar@columbia.edu'), True)
 
     def test_load_conf(self):
         list_id, mc_user, mc_key = load_conf('tests/test.conf')
@@ -20,7 +27,9 @@ class TestMailchimpSubscriber(unittest.TestCase):
             'nick@columbia.edu',
             'joe@columbia.edu'
         }
+        # Note that test-user-list.txt has some dummy addresses thrown in
         loaded_users = load_users('tests/test-user-list.txt')
+        print(loaded_users)
         self.assertEqual(test_users, loaded_users)
 
     @patch('mailchimp_subscriber.MailChimp')
@@ -75,6 +84,9 @@ class TestMailchimpSubscriber(unittest.TestCase):
         test_return = set()
         self.assertEqual(process_users(test_users, 'ctl', '123xyz', 'bar'),
                          test_return)
+
+    def test_add_users(self):
+        self.assertEqual(add_users('f', 'o', 'o', 'o'), True)
 
 
 if __name__ == "__main__":

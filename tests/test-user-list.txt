@@ -2,3 +2,5 @@ alice@columbia.edu
 bob@columbia.edu
 nick@columbia.edu
 joe@columbia.edu
+bad@notld
+nick@columbia,edu
