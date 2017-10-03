@@ -7,15 +7,16 @@ import csv
 from mailchimp3 import MailChimp
 
 EMAIL_RE = re.compile(r'(^[a-zA-Z0-9_+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)')
+EMAIL_COL = 0
+FIRST_NAME_COL = 1
+LAST_NAME_COL = 2
+NOTES_COL = 3
 
 
 def validate_email(email_address):
     """Validate the syntax of the email address"""
     match = EMAIL_RE.match(email_address)
-    if match:
-        return True
-    else:
-        return False
+    return match is not None
 
 
 class Client:
@@ -28,11 +29,11 @@ class Client:
             raise ValueError
 
     def __init__(self, row):
-        self.email_address = row[0].strip()
-        self.first_name = row[1].strip()
-        self.last_name = row[2].strip()
+        self.email_address = row[EMAIL_COL].strip()
+        self.first_name = row[FIRST_NAME_COL].strip()
+        self.last_name = row[LAST_NAME_COL].strip()
         try:
-            self.interaction_notes = row[3]
+            self.interaction_notes = row[NOTES_COL].strip()
         except IndexError:
             self.interaction_notes = None
         self.email_hash = hashlib.md5(row[0].encode('utf-8')).hexdigest()
@@ -81,7 +82,6 @@ def process_users(users, list_id, mc_user, mc_key):
     mc_client = MailChimp(mc_user, mc_key)
     for client in users.values:
         set_mailchimp_status(client, mc_client, list_id)
-    for client in users.values:
         add_user(client, mc_client, list_id)
 
 
