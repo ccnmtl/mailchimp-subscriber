@@ -23,7 +23,7 @@ class Client:
     """Client is a representation of a CTL client"""
     def __new__(cls, row):
         if (len(row) >= 3 and
-                validate_email(row[0])):
+                validate_email(row[EMAIL_COL])):
             return super(Client, cls).__new__(cls)
         else:
             raise ValueError
@@ -36,7 +36,8 @@ class Client:
             self.interaction_notes = row[NOTES_COL].strip()
         except IndexError:
             self.interaction_notes = None
-        self.email_hash = hashlib.md5(row[0].encode('utf-8')).hexdigest()
+        self.email_hash = hashlib.md5(row[EMAIL_COL].encode('utf-8'))\
+            .hexdigest()
         self.mailchimp_status = ""
 
 
@@ -69,7 +70,7 @@ def load_users(users_file):
             # Note that this isn't testing for multiple appearances of the same
             # client. If theres more than one, it takes the last appearence.
             try:
-                clients[row[0]] = Client(row)
+                clients[row[EMAIL_COL]] = Client(row)
             except ValueError:
                 pass
 
