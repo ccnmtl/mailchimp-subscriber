@@ -32,6 +32,9 @@ run: $(PY_SENTINAL)
 test: $(PY_SENTINAL)
 	$(VE)/bin/python -m tests.test_mailchimp_subscriber
 
+shell: $(PY_SENTINAL)
+	$(VE)/bin/python
+
 clean:
 	rm -rf ve
 
