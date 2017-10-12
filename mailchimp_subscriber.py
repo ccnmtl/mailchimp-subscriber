@@ -97,13 +97,13 @@ def process_users(users, list_id, mc_user, mc_key):
     """Takes a list of emails and returns a list of those not subscribed
     to the MailChimp list"""
     mc_client = MailChimp(mc_user, mc_key)
-    for client in users.values:
+    for client in users.values():
         set_mailchimp_status(client, mc_client, list_id)
 
     if (SEND_MC_EMAIL):
-        add_users_to_mailchimp(users.values, mc_client, list_id)
+        add_users_to_mailchimp(users.values(), mc_client, list_id)
     else:
-        write_users_to_file(users.values)
+        write_users_to_file(users.values())
 
 
 def add_users_to_mailchimp(clients, mc_client, list_id):
