@@ -4,7 +4,11 @@ import re
 import hashlib
 import requests
 import csv
+import time
 from mailchimp3 import MailChimp
+
+# Configuration Global
+SEND_MC_EMAIL = False
 
 EMAIL_RE = re.compile(r'(^[a-zA-Z0-9_+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)')
 EMAIL_COL = 0
@@ -21,24 +25,24 @@ def validate_email(email_address):
 
 class Client:
     """Client is a representation of a CTL client"""
-    def __new__(cls, row):
-        if (len(row) >= 3 and
-                validate_email(row[EMAIL_COL])):
+    def __new__(cls, email, first_name, last_name):
+        if (validate_email(email) and len(first_name) > 0 and
+                len(last_name) > 0):
             return super(Client, cls).__new__(cls)
         else:
             raise ValueError
 
-    def __init__(self, row):
-        self.email_address = row[EMAIL_COL].strip()
-        self.first_name = row[FIRST_NAME_COL].strip()
-        self.last_name = row[LAST_NAME_COL].strip()
-        try:
-            self.interaction_notes = row[NOTES_COL].strip()
-        except IndexError:
-            self.interaction_notes = None
-        self.email_hash = hashlib.md5(row[EMAIL_COL].encode('utf-8'))\
+    def __init__(self, email, first_name, last_name):
+        self.email_address = email.strip()
+        self.first_name = first_name.strip()
+        self.last_name = last_name.strip()
+        self.email_hash = hashlib.md5(self.email_address.encode('utf-8'))\
             .hexdigest()
         self.mailchimp_status = ""
+
+    def __repr__(self):
+        return '<Client: email_mail: {} first_name: {} last_name: {} >'\
+                .format(self.email_address, self.first_name, self.last_name)
 
 
 def set_mailchimp_status(client, mc_client, list_id):
@@ -56,9 +60,18 @@ def load_conf(conf_file):
     containing the MC List Id, MC User, and MC API key"""
     config = configparser.ConfigParser()
     config.read(conf_file)
+    send_mc_email = False
+    try:
+        if (config['DEFAULT'].getboolean('SendMCEmail',
+                                         fallback=False)):
+            send_mc_email = True
+    except ValueError:
+        pass
+
     return (config['DEFAULT']['MailchimpListID'],
             config['DEFAULT']['MailchimpUser'],
-            config['DEFAULT']['MailchimpKey'])
+            config['DEFAULT']['MailchimpKey'],
+            send_mc_email)
 
 
 def load_users(users_file):
@@ -70,7 +83,10 @@ def load_users(users_file):
             # Note that this isn't testing for multiple appearances of the same
             # client. If theres more than one, it takes the last appearence.
             try:
-                clients[row[EMAIL_COL]] = Client(row)
+                if (len(row) >= 3):
+                    clients[row[EMAIL_COL]] = Client(row[EMAIL_COL],
+                                                     row[FIRST_NAME_COL],
+                                                     row[LAST_NAME_COL])
             except ValueError:
                 pass
 
@@ -83,21 +99,41 @@ def process_users(users, list_id, mc_user, mc_key):
     mc_client = MailChimp(mc_user, mc_key)
     for client in users.values:
         set_mailchimp_status(client, mc_client, list_id)
-        add_user(client, mc_client, list_id)
+
+    if (SEND_MC_EMAIL):
+        add_users_to_mailchimp(users.values, mc_client, list_id)
+    else:
+        write_users_to_file(users.values)
 
 
-def add_user(client, mc_client, list_id):
-    if (client.mailchimp_status == 'pending' or
-            client.mailchimp_status == 'not_present'):
-        try:
-            mc_client.update.list.members.update(list_id, client.email_hash,
-                                                 "{'status': 'pending'}")
-            return True
-        except requests.exceptions.HTTPError:
-            return False
+def add_users_to_mailchimp(clients, mc_client, list_id):
+    for client in clients:
+        if (client.mailchimp_status == 'pending' or
+                client.mailchimp_status == 'not_present'):
+            try:
+                mc_client.update.list.members.update(list_id,
+                                                     client.email_hash,
+                                                     "{'status': 'pending'}")
+                return True
+            except requests.exceptions.HTTPError:
+                return False
+
+
+def write_users_to_file(clients):
+    """ Takes in a dictionary of client objects, and writes them out a
+    csv file."""
+    filename = 'Non-subscribed Clients ' + time.asctime()
+    with open(filename, 'w') as f:
+        for client in clients:
+            if (client.mailchimp_status == 'pending' or
+                    client.mailchimp_status == 'not_present'):
+                f.write(client.email_address + ', ')
+                f.write(client.first_name + ', ')
+                f.write(client.last_name + ', ')
+                f.write('\n')
 
 
 if __name__ == "__main__":
-    list_id, mc_user, mc_key = load_conf(sys.argv[1])
+    list_id, mc_user, mc_key, SEND_MC_EMAIL = load_conf(sys.argv[1])
     users = load_users(sys.argv[2])
     process_users(users, list_id, mc_user, mc_key)
