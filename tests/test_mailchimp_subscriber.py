@@ -1,7 +1,7 @@
 import unittest
 import requests
 from hypothesis import given, strategies as st
-from unittest.mock import patch, MagicMock, mock_open, call
+from unittest.mock import patch, MagicMock, call, mock_open
 from mailchimp_subscriber import (
     load_conf, load_users, validate_email,
     add_users_to_mailchimp, Client, set_mailchimp_status,
@@ -12,7 +12,9 @@ CLIENT_FACTORY = st.builds(
                     Client,
                     st.from_regex(EMAIL_RE),
                     st.text(min_size=1),
-                    st.text(min_size=1))
+                    st.text(min_size=1),
+                    interaction_notes=st.text(min_size=1),
+                    job_role=st.text(min_size=1))
 
 
 class TestMailchimpSubscriber(unittest.TestCase):
@@ -69,11 +71,11 @@ class TestMailchimpSubscriber(unittest.TestCase):
         self.assertEqual(ctl_client.mailchimp_status, 'not_present')
 
     def test_load_conf(self):
-        list_id, mc_user, mc_key, send_mc_email = load_conf('tests/test.conf')
-        self.assertEqual(list_id, '1234')
-        self.assertEqual(mc_user, 'ctl')
-        self.assertEqual(mc_key, '123xyz')
-        self.assertEqual(send_mc_email, False)
+        config = load_conf('tests/test.conf')
+        self.assertEqual(config['ListID'], '1234')
+        self.assertEqual(config['User'], 'ctl')
+        self.assertEqual(config['Key'], '123xyz')
+        self.assertEqual(config['SendMCEmail'], False)
 
     def test_load_users(self):
         # load_users takes in a csv file and returns Client objects
@@ -141,19 +143,34 @@ class TestMailchimpSubscriber(unittest.TestCase):
         self.assertFalse(add_users_to_mailchimp(
                          [client_5], mock_client, '1234'))
 
+# This test should look at the actual file stream rather than the
+# system calls because you could have commas in the input which would
+# break the CSV file
     @given(st.sampled_from(['pending', 'not_present']))
     @given(st.lists(CLIENT_FACTORY))
     def test_write_users_to_file(self, status, clients):
-        with patch("mailchimp_subscriber.open", mock_open()) as mock_file:
-            # Set the mailchimp status on each client
-            for client in clients:
-                client.mailchimp_status = status
-            write_users_to_file(clients)
-            for client in clients:
-                assert all(x in mock_file.mock_calls for x in [
-                    call().write(client.email_address + ', '),
-                    call().write(client.first_name + ', '),
-                    call().write(client.last_name + ', ')])
+        # The mocks need to use context managers because Hypothesis @given
+        # decorator does not play well with others:
+        # https://github.com/HypothesisWorks/hypothesis-python/issues/198
+        with patch("mailchimp_subscriber.open", mock_open(),
+                   create=True) as mock_file:
+            with patch("mailchimp_subscriber.csv.DictWriter.writerow")\
+                                as mock_writerow:
+                # this is a dummy value, we need to use mock_file to pass flake8
+                mock_file.mock_calls
+                # Set the mailchimp status on each client
+                for client in clients:
+                    client.mailchimp_status = status
+                write_users_to_file(clients)
+                for client in clients:
+                    # assert the mock_calls contains a call for each client
+                    self.assertIn(call({'email_address': client.email_address,
+                                        'first_name': client.first_name,
+                                        'last_name': client.last_name,
+                                        'interaction_notes':
+                                            client.interaction_notes,
+                                        'job_role': client.job_role}),
+                                  mock_writerow.mock_calls)
 
 
 if __name__ == "__main__":

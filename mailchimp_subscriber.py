@@ -5,16 +5,21 @@ import hashlib
 import requests
 import csv
 import time
+import json
 from mailchimp3 import MailChimp
 
 # Configuration Global
+CONFIG = ''
 SEND_MC_EMAIL = False
 
 EMAIL_RE = re.compile(r'(^[a-zA-Z0-9_+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)')
 EMAIL_COL = 0
 FIRST_NAME_COL = 1
 LAST_NAME_COL = 2
-NOTES_COL = 3
+INTERACTION_NOTES_COL = 3
+JOB_ROLE_COL = 4
+COLUMNS = ['email_address', 'first_name', 'last_name', 'interaction_notes',
+           'job_role']
 
 
 def validate_email(email_address):
@@ -25,17 +30,27 @@ def validate_email(email_address):
 
 class Client:
     """Client is a representation of a CTL client"""
-    def __new__(cls, email, first_name, last_name):
+    def __new__(cls, email, first_name, last_name, **kwargs):
         if (validate_email(email) and len(first_name) > 0 and
                 len(last_name) > 0):
             return super(Client, cls).__new__(cls)
         else:
             raise ValueError
 
-    def __init__(self, email, first_name, last_name):
+    def __init__(self, email, first_name, last_name, **kwargs):
         self.email_address = email.strip()
-        self.first_name = first_name.strip()
-        self.last_name = last_name.strip()
+        self.first_name = first_name.strip().replace(",", "")
+        self.last_name = last_name.strip().replace(",", "")
+        self.interaction_notes = ''
+        self.job_role = ''
+        for key, value in kwargs.items():
+            if (key == 'interaction_notes'):
+                self.interaction_notes = kwargs['interaction_notes']\
+                                               .strip().replace(",", "")
+
+            if (key == 'job_role'):
+                self.job_role = kwargs['job_role'].strip().replace(",", "")
+
         self.email_hash = hashlib.md5(self.email_address.encode('utf-8'))\
             .hexdigest()
         self.mailchimp_status = ""
@@ -43,6 +58,20 @@ class Client:
     def __repr__(self):
         return '<Client: email_mail: {} first_name: {} last_name: {} >'\
                 .format(self.email_address, self.first_name, self.last_name)
+
+    def get_all_fields(self):
+        return {'email_address': self.email_address,
+                'first_name': self.first_name,
+                'last_name': self.last_name,
+                'interaction_notes': self.interaction_notes,
+                'job_role': self.job_role}
+
+    def get_mc_fields_json(self):
+        """ returns a JSON string to be used as the data payload
+        for the Mailchimp API."""
+        values = {'FNAME': self.first_name,
+                  'LNAME': self.last_name}
+        return json.dumps(values)
 
 
 def set_mailchimp_status(client, mc_client, list_id):
@@ -68,10 +97,10 @@ def load_conf(conf_file):
     except ValueError:
         pass
 
-    return (config['DEFAULT']['MailchimpListID'],
-            config['DEFAULT']['MailchimpUser'],
-            config['DEFAULT']['MailchimpKey'],
-            send_mc_email)
+    return ({'ListID': config['DEFAULT']['MailchimpListID'],
+             'User': config['DEFAULT']['MailchimpUser'],
+             'Key': config['DEFAULT']['MailchimpKey'],
+             'SendMCEmail': send_mc_email})
 
 
 def load_users(users_file):
@@ -84,9 +113,9 @@ def load_users(users_file):
             # client. If theres more than one, it takes the last appearence.
             try:
                 if (len(row) >= 3):
-                    clients[row[EMAIL_COL]] = Client(row[EMAIL_COL],
-                                                     row[FIRST_NAME_COL],
-                                                     row[LAST_NAME_COL])
+                    client = Client(row[EMAIL_COL], row[FIRST_NAME_COL],
+                                    row[LAST_NAME_COL])
+                    clients[client.email_address] = client
             except ValueError:
                 pass
 
@@ -108,12 +137,21 @@ def process_users(users, list_id, mc_user, mc_key):
 
 def add_users_to_mailchimp(clients, mc_client, list_id):
     for client in clients:
-        if (client.mailchimp_status == 'pending' or
-                client.mailchimp_status == 'not_present'):
+        if (client.mailchimp_status == 'pending'):
             try:
-                mc_client.update.list.members.update(list_id,
-                                                     client.email_hash,
-                                                     "{'status': 'pending'}")
+                mc_client.update.list.members\
+                                        .update(list_id,
+                                                client.email_hash,
+                                                client.get_mc_fields_json())
+                return True
+            except requests.exceptions.HTTPError:
+                return False
+
+        if (client.mailchimp_status == 'not_present'):
+            try:
+                mc_client.update.list.members\
+                                        .create(list_id,
+                                                client.get_mc_fields_json())
                 return True
             except requests.exceptions.HTTPError:
                 return False
@@ -122,18 +160,16 @@ def add_users_to_mailchimp(clients, mc_client, list_id):
 def write_users_to_file(clients):
     """ Takes in a dictionary of client objects, and writes them out a
     csv file."""
-    filename = 'Non-subscribed Clients ' + time.asctime()
+    filename = 'Non-subscribed Clients ' + time.asctime() + '.csv'
     with open(filename, 'w') as f:
+        writer = csv.DictWriter(f, COLUMNS)
+        writer.writeheader()
         for client in clients:
             if (client.mailchimp_status == 'pending' or
                     client.mailchimp_status == 'not_present'):
-                f.write(client.email_address + ', ')
-                f.write(client.first_name + ', ')
-                f.write(client.last_name + ', ')
-                f.write('\n')
-
+                writer.writerow(client.get_all_fields())
 
 if __name__ == "__main__":
-    list_id, mc_user, mc_key, SEND_MC_EMAIL = load_conf(sys.argv[1])
+    CONFIG = load_conf(sys.argv[1])
     users = load_users(sys.argv[2])
-    process_users(users, list_id, mc_user, mc_key)
+    process_users(users, CONFIG['ListID'], CONFIG['User'], CONFIG['Key'])
