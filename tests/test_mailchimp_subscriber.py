@@ -156,7 +156,8 @@ class TestMailchimpSubscriber(unittest.TestCase):
                    create=True) as mock_file:
             with patch("mailchimp_subscriber.csv.DictWriter.writerow")\
                                 as mock_writerow:
-                # this is a dummy value, we need to use mock_file to pass flake8
+                # this is a dummy value, we need to use mock_file
+                # to pass flake8
                 mock_file.mock_calls
                 # Set the mailchimp status on each client
                 for client in clients:
