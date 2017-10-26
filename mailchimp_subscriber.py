@@ -169,6 +169,7 @@ def write_users_to_file(clients):
                     client.mailchimp_status == 'not_present'):
                 writer.writerow(client.get_all_fields())
 
+
 if __name__ == "__main__":
     CONFIG = load_conf(sys.argv[1])
     users = load_users(sys.argv[2])
