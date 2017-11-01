@@ -2,3 +2,7 @@
 __pycache__
 ve
 *.conf
+.hypothesis
+.DS_STORE
+Non-subscribed*
+runs/
