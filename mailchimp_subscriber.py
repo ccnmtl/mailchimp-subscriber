@@ -10,7 +10,6 @@ from mailchimp3 import MailChimp
 
 # Configuration Global
 CONFIG = ''
-SEND_MC_EMAIL = False
 
 EMAIL_RE = re.compile(r'(^[a-zA-Z0-9_+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)')
 EMAIL_COL = 0
@@ -90,12 +89,9 @@ def load_conf(conf_file):
     config = configparser.ConfigParser()
     config.read(conf_file)
     send_mc_email = False
-    try:
-        if (config['DEFAULT'].getboolean('SendMCEmail',
-                                         fallback=False)):
-            send_mc_email = True
-    except ValueError:
-        pass
+    if (config['DEFAULT'].getboolean('SendMCEmail',
+                                     fallback=False)):
+        send_mc_email = True
 
     return ({'ListID': config['DEFAULT']['MailchimpListID'],
              'User': config['DEFAULT']['MailchimpUser'],
@@ -129,7 +125,7 @@ def process_users(users, list_id, mc_user, mc_key):
     for client in users.values():
         set_mailchimp_status(client, mc_client, list_id)
 
-    if (SEND_MC_EMAIL):
+    if (CONFIG['SendMCEmail']):
         add_users_to_mailchimp(users.values(), mc_client, list_id)
     else:
         write_users_to_file(users.values())
