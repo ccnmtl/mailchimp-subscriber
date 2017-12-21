@@ -4,7 +4,7 @@ urllib3==1.22
 chardet==3.0.4
 certifi==2017.11.5
 idna==2.6
-PySocks==1.6.7
+PySocks==1.6.8
 pyOpenSSL==17.5.0
 cryptography==2.1.4
 google-api-python-client==1.6.4
