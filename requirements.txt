@@ -2,7 +2,7 @@ mailchimp3==2.0.18
 requests==2.18.4
 urllib3==1.22
 chardet==3.0.4
-certifi==2017.11.5
+certifi==2018.1.18
 idna==2.6
 PySocks==1.6.8
 pyOpenSSL==17.5.0
