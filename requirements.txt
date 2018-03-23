@@ -6,13 +6,13 @@ certifi==2018.1.18
 idna==2.6
 PySocks==1.6.8
 pyOpenSSL==17.5.0
-cryptography==2.2
+cryptography==2.2.1
 google-api-python-client==1.6.5
 uritemplate==3.0.0
 six==1.11.0
 oauth2client==4.1.2
 httplib2==0.11.0
-hypothesis==3.50.0
+hypothesis==3.50.2
 attrs==17.4.0
 coverage==4.5.1
 
