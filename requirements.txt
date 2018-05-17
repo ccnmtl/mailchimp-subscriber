@@ -5,7 +5,7 @@ chardet==3.0.4
 certifi==2018.4.16
 idna==2.6
 PySocks==1.6.8
-pyOpenSSL==17.5.0
+pyOpenSSL==18.0.0
 cryptography==2.2.2
 google-api-python-client==1.6.7
 uritemplate==3.0.0
