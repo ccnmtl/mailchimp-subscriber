@@ -16,8 +16,8 @@ hypothesis==3.58.1
 attrs==19.3.0
 coverage==4.5.1
 
-flake8==3.5.0
+flake8==3.8.2
 configparser==5.0.0
-pycodestyle==2.6.0 # pyup: <2.4.0
+pycodestyle==2.6.0
 pyflakes==2.2.0
 mccabe==0.6.1
